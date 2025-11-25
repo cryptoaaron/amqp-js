@@ -1,6 +1,6 @@
 # @cryptoaaron/amqp-js
 
-Lightweight RabbitMQ wrapper on `amqplib` with declarative topology, auto reconnect/resubscribe, health helpers, metrics/logging hooks, and ergonomic retries/dead-lettering. No implicit dotenv—pass your URL or call the helper yourself.
+Lightweight RabbitMQ wrapper on `amqplib` with declarative topology, auto reconnect/resubscribe, health helpers, metrics/logging hooks, and ergonomic retries/dead-lettering. Defaults to `amqp://localhost` so you can start with zero config and layer on options only when you need them.
 
 ## Install
 
@@ -11,13 +11,11 @@ npm install @cryptoaaron/amqp-js
 ## Setup
 
 ```js
-import { createClient, loadEnv } from '@cryptoaaron/amqp-js';
-
-// Optional: you control when env is loaded
-loadEnv(); // or skip and just set process.env yourself
+import { createClient } from '@cryptoaaron/amqp-js';
 
 const client = createClient({
-  url: process.env.AMQP_URL // required
+  // url is optional; defaults to amqp://localhost
+  url: process.env.AMQP_URL
 });
 ```
 
@@ -80,7 +78,7 @@ const client = createClient({
 ## API surface
 
 - `createClient(options)` / `new AmqpClient(options)`
-  - `url` (required): AMQP connection string (no auto dotenv)
+  - `url` (optional): AMQP connection string (defaults to `amqp://localhost`; no env loading done internally)
   - `name`: connection name (default `amqp-js`)
   - `topology.events`: map `{ [eventName]: { exchange, routingKey, queue?, exchangeType?, queueOptions?, exchangeOptions?, prefetch?, deadLetterExchange?, deadLetterRoutingKey?, deadLetterExchangeType?, validate?, headers? } }`
   - `defaultExchange`: defaults to `amqp-js.events` (topic)
@@ -104,10 +102,10 @@ const client = createClient({
 - `isConnected()`: best-effort connectivity check.
 - `getMetrics()`: counters for `publish/consume/ack/nack/reconnect`.
 - `close()`: cancels subscriptions, closes channels/connection.
-- `loadEnv(options?)`: proxy to `dotenv.config` for optional env loading.
 
 ## Defaults (zero-config)
 
+- URL: `amqp://localhost` if you omit `url`.
 - Exchange: durable `topic` named `amqp-js.events`.
 - Queue naming: `<name>.<event>.queue` (e.g., `amqp-js.user.created.queue`) when `queue` is not specified.
 - Messages: JSON-encoded objects, persistent by default.

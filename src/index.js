@@ -1,12 +1,9 @@
 import amqplib from 'amqplib';
-import { config as dotenvConfig } from 'dotenv';
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const DEFAULT_PREFETCH = 10;
 const DEFAULT_EXCHANGE = 'amqp-js.events';
 const DEFAULT_QUEUE_OPTIONS = { durable: true };
-
-export const loadEnv = (options) => dotenvConfig(options);
 
 export class AmqpJsError extends Error {
   constructor(message, context = {}, cause) {
@@ -20,7 +17,7 @@ export class AmqpJsError extends Error {
 export class AmqpClient {
   constructor(options = {}) {
     const {
-      url = process.env.AMQP_URL,
+      url = 'amqp://localhost',
       name = 'amqp-js',
       socketOptions = {},
       prefetch = DEFAULT_PREFETCH,
@@ -63,6 +60,7 @@ export class AmqpClient {
     this.closing = false;
     this.metricsState = { publishes: 0, consumes: 0, acks: 0, nacks: 0, reconnects: 0 };
     this._reconnectTimer = null;
+    this.connectingPromise = null;
     this.#resetReady();
   }
 
@@ -122,8 +120,12 @@ export class AmqpClient {
 
   async #getConnection() {
     if (this.connection && this.isConnected()) return this.connection;
-    await this.#connectWithRetry();
-    return this.connection;
+    if (this.connectingPromise) return this.connectingPromise;
+
+    this.connectingPromise = this.#connectWithRetry().finally(() => {
+      this.connectingPromise = null;
+    });
+    return this.connectingPromise;
   }
 
   async #connectWithRetry() {
@@ -349,13 +351,13 @@ export class AmqpClient {
 
     this.#metric('consume', context);
 
-    for (const hook of beforeHooks) {
-      await hook(payload, { fields: msg.fields, properties: msg.properties, raw: msg });
-    }
-
     let attempt = 1;
     while (attempt <= maxAttempts) {
       try {
+        for (const hook of beforeHooks) {
+          await hook(payload, { fields: msg.fields, properties: msg.properties, raw: msg });
+        }
+
         await sub.handler(payload, {
           fields: msg.fields,
           properties: msg.properties,

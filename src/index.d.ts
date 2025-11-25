@@ -116,5 +116,3 @@ export class AmqpClient {
 }
 
 export const createClient: (options?: AmqpClientOptions) => AmqpClient;
-
-export const loadEnv: (options?: Record<string, unknown>) => { parsed?: Record<string, string>; error?: Error };

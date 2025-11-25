@@ -104,6 +104,7 @@ class FakeAmqp {
   }
 
   async connect(url, socketOptions) {
+    if (this.connectDelay) await wait(this.connectDelay);
     this.lastUrl = url;
     this.lastSocketOptions = socketOptions;
     const conn = new FakeConnection(this);
@@ -257,10 +258,66 @@ test('ping uses lightweight channel and close works', async (t) => {
   const restore = useFakeAmqp(fake);
   t.after(restore);
 
-  const client = new AmqpClient({ url: 'amqp://test' });
+  const client = new AmqpClient({ url: 'amqp://test', onError: () => {} });
   const ok = await client.ping();
   assert.strictEqual(ok, true);
   const pingChannel = fake.channels.at(-1);
   assert.ok(pingChannel.closed, 'ping channel closed');
+  await client.close();
+});
+
+test('defaults to localhost URL when none provided', async (t) => {
+  const fake = new FakeAmqp();
+  const restore = useFakeAmqp(fake);
+  t.after(restore);
+
+  const client = new AmqpClient();
+  await client.publish('demo.event', { ok: true });
+
+  assert.strictEqual(fake.lastUrl, 'amqp://localhost');
+  await client.close();
+});
+
+test('coalesces concurrent connection attempts', async (t) => {
+  const fake = new FakeAmqp();
+  fake.connectDelay = 5;
+  const restore = useFakeAmqp(fake);
+  t.after(restore);
+
+  const client = new AmqpClient({ url: 'amqp://test' });
+
+  // Trigger publish and subscribe before the first connection resolves.
+  const publishPromise = client.publish('order.created', { id: 42 });
+  const subscribePromise = client.subscribe('order.created', async () => {});
+
+  await Promise.all([publishPromise, subscribePromise]);
+
+  assert.strictEqual(fake.connections.length, 1);
+  await client.close();
+});
+
+test('before/after hook errors still follow retry/ack flow', async (t) => {
+  const fake = new FakeAmqp();
+  const restore = useFakeAmqp(fake);
+  t.after(restore);
+
+  const client = new AmqpClient({ url: 'amqp://test', onError: () => {} });
+
+  await client.subscribe({
+    event: 'hook.test',
+    maxAttempts: 1,
+    before: () => {
+      throw new Error('before failed');
+    },
+    handler: async () => {}
+  });
+
+  const consumer = fake.channels.find((ch) => ch.consumers.length)?.consumers[0];
+  const message = { content: Buffer.from(JSON.stringify({})), fields: {}, properties: {} };
+  await consumer.cb(message);
+
+  const nackCount = fake.channels.find((ch) => ch.nacks.length)?.nacks.length || 0;
+  assert.strictEqual(nackCount, 1);
+
   await client.close();
 });
