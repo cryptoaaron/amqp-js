@@ -1,0 +1,48 @@
+{
+  "name": "@cryptoaaron/amqp-js",
+  "version": "0.1.2",
+  "description": "Lightweight RabbitMQ helper with simple publish/subscribe helpers.",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.js",
+      "types": "./src/index.d.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "rabbitmq",
+    "amqp",
+    "pubsub",
+    "events",
+    "messaging"
+  ],
+  "author": "cryptoaaron",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cryptoaaron/amqp-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cryptoaaron/amqp-js/issues"
+  },
+  "homepage": "https://github.com/cryptoaaron/amqp-js#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.3"
+  }
+}
