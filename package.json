@@ -1,6 +1,6 @@
 {
   "name": "@cryptoaaron/amqp-js",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Lightweight RabbitMQ helper with simple publish/subscribe helpers.",
   "type": "module",
   "main": "src/index.js",
